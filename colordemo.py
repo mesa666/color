@@ -207,7 +207,7 @@ def main():
     st.title("H&E Stain Normalization")
     
     # --- Setup: Image Files ---
-    folder_path = r"C:\Users\asem1\Desktop\R\BCC AI\per"  # Adjust as needed.
+    folder_path = r"img"  # Adjust as needed.
     file_pattern = os.path.join(folder_path, "*.png")
     file_list = sorted(glob.glob(file_pattern))
     
