@@ -196,7 +196,18 @@ def compute_stain_images(data, use_original, slider_values):
     
     # Combine the two stain components (here a simple average).
     Inorm_update = 0.5 * H_update + 0.5 * E_update
-    Inorm_update = np.clip(Inorm_update, 0, 255).astype(np.uint8)
+
+    # Normalize the combined image to span the full 0-255 range
+    min_val = Inorm_update.min()
+    max_val = Inorm_update.max()
+
+    # Avoid division by zero in case the image is constant
+    if max_val > min_val:
+        Inorm_update = (Inorm_update - min_val) / (max_val - min_val) * 255
+    else:
+        Inorm_update = np.zeros_like(Inorm_update)
+
+    Inorm_update = Inorm_update.astype(np.uint8)
     
     return Inorm_update, H_update, E_update
 
