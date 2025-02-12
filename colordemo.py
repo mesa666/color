@@ -283,9 +283,9 @@ def main():
     # --- Display the Images ---
     st.subheader("Output Images")
     col1, col2, col3 = st.columns(3)
-    col1.image(Inorm_update, caption="Normalized H&E", use_column_width=True)
-    col2.image(H_update, caption="H Component", use_column_width=True)
-    col3.image(E_update, caption="E Component", use_column_width=True)
+    col1.image(Inorm_update, caption="Normalized H&E", use_container_width=True)
+    col2.image(H_update, caption="H Component", use_container_width=True)
+    col3.image(E_update, caption="E Component", use_container_width=True)
 
 if __name__ == '__main__':
     main()
