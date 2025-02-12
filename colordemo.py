@@ -68,7 +68,7 @@ def load_and_precompute(image_path):
 st.title("H&E Stain Separation Demo")
 
 # File selection
-folder_path = r"C:\Users\asem1\Desktop\R\BCC AI\per"
+folder_path = r"img"
 file_list = sorted(glob.glob(os.path.join(folder_path, "*.png")))
 
 # Navigation controls
