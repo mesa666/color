@@ -16,7 +16,7 @@ beta = 0.15       # OD threshold for transparent pixels
 HERef_init = np.array([[0.5626, 0.2159],
                        [0.7201, 0.8012],
                        [0.4062, 0.5581]])
-maxCRef = np.array([1.9705, 1.0308])
+maxCRef = np.array([3, 1.5])
 
 # Precompute the original HSV values from HERef_init.
 rgb_h_orig = HERef_init[:, 0] / np.linalg.norm(HERef_init[:, 0])
