@@ -48,14 +48,6 @@ def save_slider_values(slider_values):
     """
     with open(PERSISTENCE_FILE, "w") as f:
         json.dump(slider_values, f)
-    try:
-        repo = Repo(os.getcwd())
-        repo.index.add([PERSISTENCE_FILE])
-        repo.index.commit(f"Update slider values for user {user_id}")
-        origin = repo.remote(name='origin')
-        origin.push()
-    except Exception as e:
-        st.error("Error pushing to GitHub: " + str(e))
 
 # ===================================================
 # Global Constants and Preset Stain References
@@ -338,18 +330,16 @@ def main():
             slider_values["V_E"] = st.slider("V_E (Value for Eosin)", 0, 100, int(default_V_E), key="V_E_val")
             st.markdown('</div>', unsafe_allow_html=True)
         
-        # Button to save current slider values to persistent storage (and push to GitHub).
-        if st.sidebar.button("Save Slider Settings"):
-            new_values = {
-                "H_H": st.session_state["H_H_val"],
-                "S_H": st.session_state["S_H_val"],
-                "V_H": st.session_state["V_H_val"],
-                "H_E": st.session_state["H_E_val"],
-                "S_E": st.session_state["S_E_val"],
-                "V_E": st.session_state["V_E_val"]
-            }
-            save_slider_values(new_values)
-            st.sidebar.success("Slider values saved!")
+        new_values = {
+            "H_H": st.session_state["H_H_val"],
+            "S_H": st.session_state["S_H_val"],
+            "V_H": st.session_state["V_H_val"],
+            "H_E": st.session_state["H_E_val"],
+            "S_E": st.session_state["S_E_val"],
+            "V_E": st.session_state["V_E_val"]
+        }
+        save_slider_values(new_values)
+        st.sidebar.success("Slider values saved!")
     else:
         # When using original values, assign the preset values.
         slider_values["H_H"] = h_h_orig
