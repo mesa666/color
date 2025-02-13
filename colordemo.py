@@ -7,6 +7,7 @@ import cv2
 import colorsys
 import streamlit as st
 from git import Repo
+import urllib.parse
 
 # ===================================================
 # Generate Unique User ID and Setup Persistence File
@@ -49,13 +50,17 @@ def save_slider_values(slider_values):
         github_username = st.secrets["GITHUB"]["USERNAME"]
         github_token = st.secrets["GITHUB"]["TOKEN"]
         repo_name = st.secrets["GITHUB"]["REPO_NAME"]
-        remote_url = f"https://{github_username}:{github_token}@github.com/{repo_name}.git"
-        # Update the remote URL to include credentials.
+        encoded_token = urllib.parse.quote(github_token, safe='')
+        remote_url = f"https://{github_username}:{encoded_token}@github.com/{repo_name}.git"
+        st.write("Using remote URL:", remote_url)  # Debug output
+
+        # Update the remote URL for the 'origin' remote.
         origin = repo.remote(name='origin')
         origin.set_url(remote_url)
         repo.index.add([PERSISTENCE_FILE])
         repo.index.commit(f"Update slider values for user {user_id}")
         origin.push()
+        st.success("Pushed slider values to GitHub successfully!")
     except Exception as e:
         st.error("Error pushing to GitHub: " + str(e))
 
