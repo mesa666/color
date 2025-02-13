@@ -49,7 +49,7 @@ def save_slider_values(slider_values):
         github_username = st.secrets["GITHUB"]["USERNAME"]
         github_token = st.secrets["GITHUB"]["TOKEN"]
         repo_name = st.secrets["GITHUB"]["REPO_NAME"]
-        remote_url = f"https://{mesa666}:{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}@github.com/{color}.git"
+        remote_url = f"https://{github_username}:{github_token}@github.com/{repo_name}.git"
         # Update the remote URL to include credentials.
         origin = repo.remote(name='origin')
         origin.set_url(remote_url)
