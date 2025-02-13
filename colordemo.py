@@ -339,7 +339,7 @@ def main():
             "V_E": st.session_state["V_E_val"]
         }
         save_slider_values(new_values)
-        st.sidebar.success("Slider values saved!")
+        st.sidebar.success(new_values)
     else:
         # When using original values, assign the preset values.
         slider_values["H_H"] = h_h_orig
