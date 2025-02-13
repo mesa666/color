@@ -6,6 +6,7 @@ import numpy as np
 import cv2
 import colorsys
 import streamlit as st
+from git import Repo
 
 # ===================================================
 # Generate Unique User ID and Setup Persistence File
@@ -15,7 +16,20 @@ if "user_id" not in st.session_state:
 user_id = st.session_state["user_id"]
 PERSISTENCE_FILE = f"slider_values_{user_id}.json"
 
+# ===================================================
+# GitPython Persistence Functions
+# ===================================================
 def load_slider_values():
+    """
+    Pulls the latest changes from the remote repository and then loads
+    the persistence JSON file for the current user.
+    """
+    try:
+        repo = Repo(os.getcwd())
+        origin = repo.remote(name='origin')
+        origin.pull()  # Pull latest changes from GitHub
+    except Exception as e:
+        st.error("Error pulling from GitHub: " + str(e))
     if os.path.exists(PERSISTENCE_FILE):
         with open(PERSISTENCE_FILE, "r") as f:
             return json.load(f)
@@ -23,8 +37,25 @@ def load_slider_values():
         return {}
 
 def save_slider_values(slider_values):
+    """
+    Saves the slider values to the local JSON file and then commits and pushes
+    the file to the GitHub repository.
+    
+    IMPORTANT:
+      - For this to work in Streamlit Cloud, you must have set up your remote URL
+        to include your GitHub personal access token (e.g., via st.secrets) or ensure
+        that your repository is configured to allow push access.
+    """
     with open(PERSISTENCE_FILE, "w") as f:
         json.dump(slider_values, f)
+    try:
+        repo = Repo(os.getcwd())
+        repo.index.add([PERSISTENCE_FILE])
+        repo.index.commit(f"Update slider values for user {user_id}")
+        origin = repo.remote(name='origin')
+        origin.push()
+    except Exception as e:
+        st.error("Error pushing to GitHub: " + str(e))
 
 # ===================================================
 # Global Constants and Preset Stain References
@@ -218,7 +249,7 @@ def compute_stain_images(data, use_original, slider_values):
     # Combine the two stain components (here a simple average).
     Inorm_update = 0.5 * H_update + 0.5 * E_update
 
-    # Normalize the combined image to span the full 0-255 range
+    # Normalize the combined image to span the full 0-255 range.
     min_val = Inorm_update.min()
     max_val = Inorm_update.max()
     if max_val > min_val:
@@ -307,7 +338,7 @@ def main():
             slider_values["V_E"] = st.slider("V_E (Value for Eosin)", 0, 100, int(default_V_E), key="V_E_val")
             st.markdown('</div>', unsafe_allow_html=True)
         
-        # Button to save current slider values to persistent storage.
+        # Button to save current slider values to persistent storage (and push to GitHub).
         if st.sidebar.button("Save Slider Settings"):
             new_values = {
                 "H_H": st.session_state["H_H_val"],
