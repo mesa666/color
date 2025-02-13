@@ -1,9 +1,61 @@
 import os
 import glob
+import json
+import uuid
 import numpy as np
 import cv2
 import colorsys
 import streamlit as st
+from git import Repo
+
+# ===================================================
+# Generate Unique User ID and Setup Persistence File
+# ===================================================
+if "user_id" not in st.session_state:
+    st.session_state["user_id"] = str(uuid.uuid4())
+user_id = st.session_state["user_id"]
+PERSISTENCE_FILE = f"slider_values_{user_id}.json"
+
+# ===================================================
+# GitPython Persistence Functions
+# ===================================================
+def load_slider_values():
+    """
+    Pulls the latest changes from the remote repository and then loads
+    the persistence JSON file for the current user.
+    """
+    try:
+        repo = Repo(os.getcwd())
+        origin = repo.remote(name='origin')
+        origin.pull()  # Pull latest changes from GitHub
+    except Exception as e:
+        st.error("Error pulling from GitHub: " + str(e))
+    if os.path.exists(PERSISTENCE_FILE):
+        with open(PERSISTENCE_FILE, "r") as f:
+            return json.load(f)
+    else:
+        return {}
+
+def save_slider_values(slider_values):
+    """
+    Saves the slider values to the local JSON file and then commits and pushes
+    the file to the GitHub repository.
+    
+    IMPORTANT:
+      - For this to work in Streamlit Cloud, you must have set up your remote URL
+        to include your GitHub personal access token (e.g., via st.secrets) or ensure
+        that your repository is configured to allow push access.
+    """
+    with open(PERSISTENCE_FILE, "w") as f:
+        json.dump(slider_values, f)
+    try:
+        repo = Repo(os.getcwd())
+        repo.index.add([PERSISTENCE_FILE])
+        repo.index.commit(f"Update slider values for user {user_id}")
+        origin = repo.remote(name='origin')
+        origin.push()
+    except Exception as e:
+        st.error("Error pushing to GitHub: " + str(e))
 
 # ===================================================
 # Global Constants and Preset Stain References
@@ -30,7 +82,6 @@ h_e_orig, s_e_orig, v_e_orig = h_e_orig * 360, s_e_orig * 100, v_e_orig * 100
 # ===================================================
 # Inject Custom CSS for Colored Sliders
 # ===================================================
-# We wrap each slider in a container with a unique class so that we can apply different gradient styles.
 st.markdown(
     """
     <style>
@@ -78,7 +129,7 @@ st.markdown(
         width: 20px;
         border-radius: 50%;
         background: #fff;
-        margin-top: -6px; /* Center the thumb */
+        margin-top: -6px;
         cursor: pointer;
     }
     input[type=range]::-moz-range-thumb {
@@ -101,6 +152,7 @@ def load_and_precompute(image_path):
     """
     Loads an image, converts it to RGB, and precomputes
     the stain deconvolution parameters.
+    
     Returns a dictionary with:
       - 'img': the RGB image
       - 'h', 'w', 'c': image dimensions
@@ -197,16 +249,13 @@ def compute_stain_images(data, use_original, slider_values):
     # Combine the two stain components (here a simple average).
     Inorm_update = 0.5 * H_update + 0.5 * E_update
 
-    # Normalize the combined image to span the full 0-255 range
+    # Normalize the combined image to span the full 0-255 range.
     min_val = Inorm_update.min()
     max_val = Inorm_update.max()
-
-    # Avoid division by zero in case the image is constant
     if max_val > min_val:
         Inorm_update = (Inorm_update - min_val) / (max_val - min_val) * 255
     else:
         Inorm_update = np.zeros_like(Inorm_update)
-
     Inorm_update = Inorm_update.astype(np.uint8)
     
     return Inorm_update, H_update, E_update
@@ -252,33 +301,55 @@ def main():
     color_mode = st.sidebar.radio("Color Mode", options=["Original Colors", "Slider Colors"])
     use_original = (color_mode == "Original Colors")
     
+    # Load persistent slider values for this user.
+    saved_values = load_slider_values()
+    default_H_H = saved_values.get("H_H", h_h_orig)
+    default_S_H = saved_values.get("S_H", s_h_orig)
+    default_V_H = saved_values.get("V_H", v_h_orig)
+    default_H_E = saved_values.get("H_E", h_e_orig)
+    default_S_E = saved_values.get("S_E", s_e_orig)
+    default_V_E = saved_values.get("V_E", v_e_orig)
+    
     # Create (and preserve) slider values using unique keys.
     slider_values = {}
     if not use_original:
         with st.sidebar.container():
             st.markdown('<div class="hue-slider">', unsafe_allow_html=True)
-            slider_values["H_H"] = st.slider("H_H (Hue for Hematoxylin)", 0, 360, int(st.session_state.get("H_H_val", h_h_orig)), key="H_H_val")
+            slider_values["H_H"] = st.slider("H_H (Hue for Hematoxylin)", 0, 360, int(default_H_H), key="H_H_val")
             st.markdown('</div>', unsafe_allow_html=True)
         with st.sidebar.container():
             st.markdown('<div class="saturation-slider">', unsafe_allow_html=True)
-            slider_values["S_H"] = st.slider("S_H (Saturation for Hematoxylin)", 0, 100, int(st.session_state.get("S_H_val", s_h_orig)), key="S_H_val")
+            slider_values["S_H"] = st.slider("S_H (Saturation for Hematoxylin)", 0, 100, int(default_S_H), key="S_H_val")
             st.markdown('</div>', unsafe_allow_html=True)
         with st.sidebar.container():
             st.markdown('<div class="value-slider">', unsafe_allow_html=True)
-            slider_values["V_H"] = st.slider("V_H (Value for Hematoxylin)", 0, 100, int(st.session_state.get("V_H_val", v_h_orig)), key="V_H_val")
+            slider_values["V_H"] = st.slider("V_H (Value for Hematoxylin)", 0, 100, int(default_V_H), key="V_H_val")
             st.markdown('</div>', unsafe_allow_html=True)
         with st.sidebar.container():
             st.markdown('<div class="hue-slider">', unsafe_allow_html=True)
-            slider_values["H_E"] = st.slider("H_E (Hue for Eosin)", 0, 360, int(st.session_state.get("H_E_val", h_e_orig)), key="H_E_val")
+            slider_values["H_E"] = st.slider("H_E (Hue for Eosin)", 0, 360, int(default_H_E), key="H_E_val")
             st.markdown('</div>', unsafe_allow_html=True)
         with st.sidebar.container():
             st.markdown('<div class="saturation-slider">', unsafe_allow_html=True)
-            slider_values["S_E"] = st.slider("S_E (Saturation for Eosin)", 0, 100, int(st.session_state.get("S_E_val", s_e_orig)), key="S_E_val")
+            slider_values["S_E"] = st.slider("S_E (Saturation for Eosin)", 0, 100, int(default_S_E), key="S_E_val")
             st.markdown('</div>', unsafe_allow_html=True)
         with st.sidebar.container():
             st.markdown('<div class="value-slider">', unsafe_allow_html=True)
-            slider_values["V_E"] = st.slider("V_E (Value for Eosin)", 0, 100, int(st.session_state.get("V_E_val", v_e_orig)), key="V_E_val")
+            slider_values["V_E"] = st.slider("V_E (Value for Eosin)", 0, 100, int(default_V_E), key="V_E_val")
             st.markdown('</div>', unsafe_allow_html=True)
+        
+        # Button to save current slider values to persistent storage (and push to GitHub).
+        if st.sidebar.button("Save Slider Settings"):
+            new_values = {
+                "H_H": st.session_state["H_H_val"],
+                "S_H": st.session_state["S_H_val"],
+                "V_H": st.session_state["V_H_val"],
+                "H_E": st.session_state["H_E_val"],
+                "S_E": st.session_state["S_E_val"],
+                "V_E": st.session_state["V_E_val"]
+            }
+            save_slider_values(new_values)
+            st.sidebar.success("Slider values saved!")
     else:
         # When using original values, assign the preset values.
         slider_values["H_H"] = h_h_orig
