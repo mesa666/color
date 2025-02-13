@@ -40,22 +40,25 @@ def save_slider_values(slider_values):
     """
     Saves the slider values to the local JSON file and then commits and pushes
     the file to the GitHub repository.
-    
-    IMPORTANT:
-      - For this to work in Streamlit Cloud, you must have set up your remote URL
-        to include your GitHub personal access token (e.g., via st.secrets) or ensure
-        that your repository is configured to allow push access.
     """
     with open(PERSISTENCE_FILE, "w") as f:
         json.dump(slider_values, f)
     try:
         repo = Repo(os.getcwd())
+        # Construct the authenticated remote URL using secrets.
+        github_username = st.secrets["GITHUB"]["USERNAME"]
+        github_token = st.secrets["GITHUB"]["TOKEN"]
+        repo_name = st.secrets["GITHUB"]["REPO_NAME"]
+        remote_url = f"https://{mesa666}:{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}@github.com/{color}.git"
+        # Update the remote URL to include credentials.
+        origin = repo.remote(name='origin')
+        origin.set_url(remote_url)
         repo.index.add([PERSISTENCE_FILE])
         repo.index.commit(f"Update slider values for user {user_id}")
-        origin = repo.remote(name='origin')
         origin.push()
     except Exception as e:
         st.error("Error pushing to GitHub: " + str(e))
+
 
 # ===================================================
 # Global Constants and Preset Stain References
